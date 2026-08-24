@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RONB Lite - Post Generator</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- HTML2Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0B1120;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --brand-primary: #3B82F6;
+            --brand-secondary: #1D4ED8;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 1100px;
+            width: 100%;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.25rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 2rem;
+            }
+
+            .container {
+                display: grid;
+                grid-template-columns: 1fr 1.2fr;
+                gap: 3rem;
+                padding: 3rem;
+            }
+        }
+
+        /* Controls Area */
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60A5FA, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        input[type="file"] {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: white;
+            border: none;
+            padding: 1.1rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+            margin-top: 0.5rem;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.5);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .preview-section {
+            display: none;
+            /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            background: #e0e5ec;
+            border: 2px dashed rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 1rem;
+            position: relative;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        .preview-section.image-mode {
+            padding: 0.5rem;
+            /* Tighter padding for images */
+        }
+
+        @media (min-width: 768px) {
+            .preview-section {
+                padding: 2rem;
+            }
+
+            .preview-section.image-mode {
+                padding: 1rem;
+            }
+        }
+
+        .preview-section.active {
+            display: flex;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .empty-state {
+            display: none;
+            /* completely removed empty state */
+        }
+
+        /* Generated Post Styling */
+        .generated-post {
+            width: 100%;
+            max-width: 420px;
+            height: auto;
+            flex-shrink: 0;
+            background: #e0e5ec;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            display: none;
+            flex-direction: column;
+            box-shadow: 9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
+            border: none;
+        }
+
+        .generated-post.active {
+            display: flex;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .post-image-area {
+            position: relative;
+            width: 100%;
+            flex-grow: 1;
+            /* Take up remaining space below caption */
+            background-color: #1e293b;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .cta-brand {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #DC2626;
+            padding: 4px 8px;
+            border-radius: 6px;
+            z-index: 10;
+        }
+
+        .cta-brand .brand {
+            font-weight: 700;
+            font-size: 0.65rem;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .cta-brand .fb-icon {
+            fill: #ffffff;
+            width: 12px;
+            height: 12px;
+        }
+
+        .cta-follow {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2563EB;
+            color: #ffffff;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.45rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-caption-area {
+            width: 100%;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem 1rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .generated-post.text-only-mode .post-caption-area {
+            padding: 1rem 0.5rem;
+            /* Less padding to fit device width cleanly */
+            justify-content: flex-start;
+        }
+
+        .post-caption-area .caption-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #111827;
+            line-height: 1.45;
+            width: 100%;
+            max-height: 100%;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            text-align: center;
+        }
+
+        .generated-post.text-only-mode .post-caption-area .caption-text {
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- Controls Area -->
+        <div class="controls-section">
+            <div class="header">
+                <h1>RONB Lite Generator</h1>
+                <p>Create impactful, branded Facebook posts in seconds.</p>
+            </div>
+
+            <div class="input-group">
+                <label for="postContent">Post Content</label>
+                <textarea id="postContent" placeholder="Enter your breaking news or update here..."></textarea>
+            </div>
+
+            <div class="input-group">
+                <label for="postImage">Background Photo (Optional)</label>
+                <input type="file" id="postImage" accept="image/*">
+            </div>
+
+            <div class="input-group"
+                style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <input type="checkbox" id="dragToggle" style="width: auto; cursor: pointer;">
+                <label for="dragToggle"
+                    style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable drag & drop
+                    for badges</label>
+            </div>
+
+            <button class="generate-btn" id="generateBtn">Generate Post</button>
+            <button class="generate-btn" id="downloadBtn"
+                style="display: none; background: linear-gradient(135deg, #10B981, #059669); margin-top: 0;">Download as
+                Image</button>
+        </div>
+
+        <!-- Preview Area -->
+        <div class="preview-section" id="previewSection">
+            <div class="generated-post" id="generatedPost">
+                <div class="post-image-area" id="postImageArea"></div>
+                <div class="post-caption-area">
+                    <div class="cta-brand" id="ctaBrand">
+                        <svg class="fb-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                        </svg>
+                        <span class="brand">RONB Lite</span>
+                    </div>
+                    <div class="caption-text" id="renderText"></div>
+                </div>
+                <div class="cta-follow" id="ctaFollow">Follow Us</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const generateBtn = document.getElementById('generateBtn');
+        const postContent = document.getElementById('postContent');
+        const postImage = document.getElementById('postImage');
+
+        const previewSection = document.getElementById('previewSection');
+        const generatedPost = document.getElementById('generatedPost');
+        const renderText = document.getElementById('renderText');
+        const postImageArea = document.getElementById('postImageArea');
+        const captionArea = document.querySelector('.post-caption-area');
+        const ctaBrand = document.getElementById('ctaBrand');
+        const ctaFollow = document.getElementById('ctaFollow');
+
+        generateBtn.addEventListener('click', () => {
+            const textValue = postContent.value.trim();
+            const hasImage = postImage.files && postImage.files.length > 0;
+
+            if (!textValue && !hasImage) {
+                alert('Please enter some text or select an image to generate the post.');
+                return;
+            }
+
+            // Reveal entire preview section and canvas
+            previewSection.classList.add('active');
+
+            // Re-trigger animation
+            generatedPost.classList.remove('active');
+            void generatedPost.offsetWidth; // trigger reflow
+            generatedPost.classList.add('active');
+
+            // Set text content
+            renderText.textContent = textValue;
+
+            // Handle background image or fallback
+            let isMobile = window.innerWidth <= 768;
+            let baseSize = hasImage ? (isMobile ? 0.7 : 0.9) : (isMobile ? 0.85 : 1.15);
+            renderText.style.fontSize = baseSize + 'rem';
+
+            const onlyImage = hasImage && !textValue;
+            const onlyText = !hasImage && textValue;
+            const imageAndText = hasImage && textValue;
+
+            if (onlyImage) {
+                generatedPost.classList.remove('text-only-mode');
+                previewSection.classList.add('image-mode');
+                generatedPost.style.aspectRatio = '420 / 520';
+                generatedPost.style.background = '#e0e5ec';
+                postImageArea.style.display = 'block';
+                captionArea.style.display = 'block';
+                captionArea.style.position = 'static'; // Allow ctaBrand to be relative to generatedPost
+                captionArea.style.padding = '0';
+                captionArea.style.minHeight = '0';
+                captionArea.style.height = '0';
+                renderText.style.display = 'none';
+
+                ctaBrand.style.top = 'auto';
+                ctaBrand.style.bottom = '24px';
+                ctaBrand.style.left = '50%';
+                ctaBrand.style.right = 'auto';
+                ctaBrand.style.transform = 'translateX(-50%)';
+
+                ctaFollow.style.bottom = '6px';
+                ctaFollow.style.left = '50%';
+                ctaFollow.style.right = 'auto';
+                ctaFollow.style.transform = 'translateX(-50%)';
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    postImageArea.style.backgroundImage = `url('${e.target.result}')`; // Clean image
+                }
+                reader.readAsDataURL(postImage.files[0]);
+            } else if (imageAndText) {
+                generatedPost.classList.remove('text-only-mode');
+                previewSection.classList.add('image-mode');
+                generatedPost.style.aspectRatio = '420 / 520';
+                generatedPost.style.background = '#e0e5ec';
+                postImageArea.style.display = 'block';
+
+                captionArea.style.display = 'flex';
+                captionArea.style.position = 'relative';
+                captionArea.style.padding = ''; // restore padding
+                captionArea.style.height = 'auto';
+                captionArea.style.maxHeight = '40%';
+                captionArea.style.minHeight = 'auto';
+                captionArea.style.background = 'transparent';
+                captionArea.style.borderLeft = 'none';
+                renderText.style.display = 'block';
+                renderText.style.color = '#111827';
+
+                ctaBrand.style.top = '0';
+                ctaBrand.style.bottom = 'auto';
+                ctaBrand.style.left = '50%';
+                ctaBrand.style.right = 'auto';
+                ctaBrand.style.transform = 'translate(-50%, -50%)';
+
+                ctaFollow.style.bottom = '6px';
+                ctaFollow.style.left = '50%';
+                ctaFollow.style.right = 'auto';
+                ctaFollow.style.transform = 'translateX(-50%)';
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    postImageArea.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('${e.target.result}')`;
+                }
+                reader.readAsDataURL(postImage.files[0]);
+            } else if (onlyText) {
+                generatedPost.classList.add('text-only-mode');
+                previewSection.classList.remove('image-mode');
+                generatedPost.style.aspectRatio = 'auto';
+                generatedPost.style.background = `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url('RONB.jpg') center/cover no-repeat, #e0e5ec`;
+                postImageArea.style.display = 'none';
+
+                captionArea.style.display = 'flex';
+                captionArea.style.position = 'relative';
+                captionArea.style.padding = ''; // restore padding
+                captionArea.style.height = 'auto';
+                captionArea.style.minHeight = '220px';
+                captionArea.style.maxHeight = '100%';
+                captionArea.style.background = `transparent`;
+                captionArea.style.borderLeft = 'none';
+                renderText.style.display = 'block';
+                renderText.style.color = '#111827';
+
+                ctaBrand.style.top = 'auto';
+                ctaBrand.style.bottom = '24px';
+                ctaBrand.style.left = '50%';
+                ctaBrand.style.right = 'auto';
+                ctaBrand.style.transform = 'translateX(-50%)';
+
+                ctaFollow.style.bottom = '6px';
+                ctaFollow.style.left = '50%';
+                ctaFollow.style.right = 'auto';
+                ctaFollow.style.transform = 'translateX(-50%)';
+            }
+
+            // Dynamically adjust font size
+            setTimeout(() => {
+                let currentSize = baseSize;
+                const maxAllowedHeight = hasImage ? (generatedPost.clientHeight * 0.4) : (captionArea.clientHeight - 40);
+                while (renderText.scrollHeight > maxAllowedHeight && currentSize > 0.5) {
+                    currentSize -= 0.05;
+                    renderText.style.fontSize = currentSize + 'rem';
+                }
+
+                // Show download button after generation
+                const downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.style.display = 'block';
+            }, 0);
+        });
+
+        // Download functionality
+        const downloadBtn = document.getElementById('downloadBtn');
+        downloadBtn.addEventListener('click', () => {
+            const postElement = document.getElementById('generatedPost');
+
+            // Revert rounding just for the screenshot so it looks clean as a standalone image if desired (optional)
+
+            html2canvas(postElement, {
+                useCORS: true,
+                scale: 2, // High resolution
+                backgroundColor: null,
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'ronb-lite-post.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        // Drag and Drop Functionality
+        const dragToggle = document.getElementById('dragToggle');
+
+        let isDragging = false;
+        let activeBadge = null;
+        let startX, startY, initialX, initialY;
+
+        function makeDraggable(element) {
+            element.addEventListener('mousedown', dragStart);
+            element.addEventListener('touchstart', dragStart, { passive: false });
+        }
+
+        function dragStart(e) {
+            if (!dragToggle.checked) return;
+
+            activeBadge = this;
+            isDragging = true;
+
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
+
+            const rect = activeBadge.getBoundingClientRect();
+            const parentRect = generatedPost.getBoundingClientRect();
+
+            initialX = rect.left - parentRect.left;
+            initialY = rect.top - parentRect.top;
+
+            activeBadge.style.bottom = 'auto';
+            activeBadge.style.right = 'auto';
+            activeBadge.style.transform = 'none';
+            activeBadge.style.margin = '0';
+            activeBadge.style.left = initialX + 'px';
+            activeBadge.style.top = initialY + 'px';
+
+            activeBadge.style.cursor = 'grabbing';
+            activeBadge.style.transition = 'none';
+        }
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, { passive: false });
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+
+        function drag(e) {
+            if (!isDragging || !activeBadge || !dragToggle.checked) return;
+
+            e.preventDefault();
+
+            let clientX, clientY;
+            if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            activeBadge.style.left = (initialX + dx) + 'px';
+            activeBadge.style.top = (initialY + dy) + 'px';
+        }
+
+        function dragEnd() {
+            if (activeBadge) {
+                activeBadge.style.cursor = dragToggle.checked ? 'grab' : 'default';
+            }
+            isDragging = false;
+            activeBadge = null;
+        }
+
+        makeDraggable(ctaBrand);
+        makeDraggable(ctaFollow);
+
+        dragToggle.addEventListener('change', () => {
+            ctaBrand.style.cursor = dragToggle.checked ? 'grab' : 'default';
+            ctaFollow.style.cursor = dragToggle.checked ? 'grab' : 'default';
+
+            if (!dragToggle.checked) {
+                // Reset positions to layout defaults by simulating a generation click
+                if (renderText.textContent || (postImage.files && postImage.files.length > 0)) {
+                    generateBtn.click();
+                } else {
+                    ctaBrand.style = '';
+                    ctaFollow.style = '';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
