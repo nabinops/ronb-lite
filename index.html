@@ -306,8 +306,8 @@
         }
 
         .generated-post.text-only-mode .post-caption-area {
-            padding: 1rem 0.5rem;
-            /* Less padding to fit device width cleanly */
+            padding: 0;
+            margin: 0;
             justify-content: flex-start;
         }
 
@@ -326,6 +326,8 @@
 
         .generated-post.text-only-mode .post-caption-area .caption-text {
             text-align: left;
+            padding: 0;
+            margin: 0;
         }
     </style>
 </head>
@@ -492,12 +494,13 @@
                 generatedPost.classList.add('text-only-mode');
                 previewSection.classList.remove('image-mode');
                 generatedPost.style.aspectRatio = 'auto';
-                generatedPost.style.background = `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url('RONB.jpg') center/cover no-repeat, #e0e5ec`;
+                generatedPost.style.background = `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url('./RONB.jpg') center/cover no-repeat, #e0e5ec`;
                 postImageArea.style.display = 'none';
 
                 captionArea.style.display = 'flex';
                 captionArea.style.position = 'relative';
-                captionArea.style.padding = ''; // restore padding
+                captionArea.style.padding = '0';
+                captionArea.style.margin = '0';
                 captionArea.style.height = 'auto';
                 captionArea.style.minHeight = '220px';
                 captionArea.style.maxHeight = '100%';
