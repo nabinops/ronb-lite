@@ -167,6 +167,24 @@
             transform: translateY(0);
         }
 
+        .download-btn {
+            background: transparent;
+            color: #10B981;
+            border: 1px solid #10B981;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            align-self: center; /* Center it nicely under the generate button */
+            margin-top: 0;
+        }
+
+        .download-btn:hover {
+            background: rgba(16, 185, 129, 0.1);
+        }
+
         .preview-section {
             display: none;
             /* Hidden by default */
@@ -306,9 +324,13 @@
         }
 
         .generated-post.text-only-mode .post-caption-area {
-            padding: 0;
+            padding: 2rem;
+            /* Clean space to prevent touching edges */
             margin: 0;
-            justify-content: flex-start;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            flex-grow: 1;
         }
 
         .post-caption-area .caption-text {
@@ -325,7 +347,7 @@
         }
 
         .generated-post.text-only-mode .post-caption-area .caption-text {
-            text-align: left;
+            text-align: center;
             padding: 0;
             margin: 0;
         }
@@ -353,17 +375,21 @@
             </div>
 
             <div class="input-group"
-                style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
-                <input type="checkbox" id="dragToggle" style="width: auto; cursor: pointer;">
-                <label for="dragToggle"
-                    style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable drag & drop
-                    for badges</label>
+                style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="dragToggle" style="width: auto; cursor: pointer;">
+                    <label for="dragToggle"
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable drag</label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="resizeToggle" style="width: auto; cursor: pointer;">
+                    <label for="resizeToggle"
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable resize</label>
+                </div>
             </div>
 
             <button class="generate-btn" id="generateBtn">Generate Post</button>
-            <button class="generate-btn" id="downloadBtn"
-                style="display: none; background: linear-gradient(135deg, #10B981, #059669); margin-top: 0;">Download as
-                Image</button>
+            <button class="download-btn" id="downloadBtn" style="display: none;">Download</button>
         </div>
 
         <!-- Preview Area -->
@@ -374,7 +400,7 @@
                     <div class="cta-brand" id="ctaBrand">
                         <svg class="fb-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path
-                                d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686[...]"
+                                d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                         </svg>
                         <span class="brand">RONB Lite</span>
                     </div>
@@ -493,16 +519,16 @@
             } else if (onlyText) {
                 generatedPost.classList.add('text-only-mode');
                 previewSection.classList.remove('image-mode');
-                generatedPost.style.aspectRatio = 'auto';
+                generatedPost.style.aspectRatio = '420 / 520';
                 generatedPost.style.background = `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url('./ronb.jpg') center/cover no-repeat, #e0e5ec`;
                 postImageArea.style.display = 'none';
 
                 captionArea.style.display = 'flex';
                 captionArea.style.position = 'relative';
-                captionArea.style.padding = '0';
+                captionArea.style.padding = '2rem 2rem 4rem 2rem'; // Extra padding at bottom for badges, but clean otherwise
                 captionArea.style.margin = '0';
-                captionArea.style.height = 'auto';
-                captionArea.style.minHeight = '220px';
+                captionArea.style.height = '100%';
+                captionArea.style.minHeight = 'auto';
                 captionArea.style.maxHeight = '100%';
                 captionArea.style.background = `transparent`;
                 captionArea.style.borderLeft = 'none';
@@ -557,6 +583,7 @@
 
         // Drag and Drop Functionality
         const dragToggle = document.getElementById('dragToggle');
+        const resizeToggle = document.getElementById('resizeToggle');
 
         let isDragging = false;
         let activeBadge = null;
@@ -565,6 +592,35 @@
         function makeDraggable(element) {
             element.addEventListener('mousedown', dragStart);
             element.addEventListener('touchstart', dragStart, { passive: false });
+            element.addEventListener('wheel', handleResize, { passive: false });
+            element.dataset.scale = 1;
+        }
+
+        function handleResize(e) {
+            if (!resizeToggle.checked) return;
+            e.preventDefault();
+            
+            let scale = parseFloat(this.dataset.scale || 1);
+            if (e.deltaY < 0) {
+                scale += 0.05;
+            } else {
+                scale -= 0.05;
+            }
+            scale = Math.min(Math.max(0.3, scale), 4);
+            this.dataset.scale = scale;
+            
+            if (this.style.transformOrigin !== 'top left') {
+                const rect = this.getBoundingClientRect();
+                const parentRect = generatedPost.getBoundingClientRect();
+                this.style.bottom = 'auto';
+                this.style.right = 'auto';
+                this.style.margin = '0';
+                this.style.left = (rect.left - parentRect.left) + 'px';
+                this.style.top = (rect.top - parentRect.top) + 'px';
+                this.style.transformOrigin = 'top left';
+            }
+            
+            this.style.transform = `scale(${scale})`;
         }
 
         function dragStart(e) {
@@ -589,7 +645,8 @@
 
             activeBadge.style.bottom = 'auto';
             activeBadge.style.right = 'auto';
-            activeBadge.style.transform = 'none';
+            activeBadge.style.transformOrigin = 'top left';
+            activeBadge.style.transform = `scale(${activeBadge.dataset.scale || 1})`;
             activeBadge.style.margin = '0';
             activeBadge.style.left = initialX + 'px';
             activeBadge.style.top = initialY + 'px';
@@ -646,6 +703,20 @@
                 } else {
                     ctaBrand.style = '';
                     ctaFollow.style = '';
+                }
+            }
+        });
+
+        resizeToggle.addEventListener('change', () => {
+            if (!resizeToggle.checked) {
+                ctaBrand.dataset.scale = 1;
+                ctaFollow.dataset.scale = 1;
+                
+                if (ctaBrand.style.transform.includes('scale')) {
+                    ctaBrand.style.transform = 'scale(1)';
+                }
+                if (ctaFollow.style.transform.includes('scale')) {
+                    ctaFollow.style.transform = 'scale(1)';
                 }
             }
         });
