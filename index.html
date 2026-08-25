@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 
-    <!-- HTML2Canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- html-to-image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
     <style>
         :root {
@@ -291,8 +291,8 @@
 
         .cta-brand .fb-icon {
             fill: #ffffff;
-            width: 12px;
-            height: 12px;
+            width: 15px;
+            height: 15px;
         }
 
         .cta-follow {
@@ -302,9 +302,9 @@
             transform: translateX(-50%);
             background: #2563EB;
             color: #ffffff;
-            padding: 2px 4px;
+            padding: 3px 6px;
             border-radius: 4px;
-            font-size: 0.45rem;
+            font-size: 0.5rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -552,7 +552,7 @@
                 postImageArea.style.backgroundImage = `url('./ronb.jpg')`;
                 postImageArea.style.backgroundSize = 'cover';
                 postImageArea.style.backgroundPosition = 'center';
-                postImageArea.innerHTML = '<div style="position:absolute; inset:0; background: rgba(255, 255, 255, 0.95);"></div>';
+                postImageArea.innerHTML = '<div style="position:absolute; inset:0; background: rgba(255, 255, 255, 0.85);"></div>';
 
                 captionArea.style.display = 'flex';
                 captionArea.style.position = 'relative';
@@ -601,24 +601,31 @@
 
             const origRadius = postElement.style.borderRadius;
             const origShadow = postElement.style.boxShadow;
+            const origAnimation = postElement.style.animation;
             
             // Remove border radius and shadow during capture to ensure sharp, non-faded edges
+            // Also remove animations to prevent opacity bleeding bugs in html2canvas
             postElement.style.borderRadius = '0px';
             postElement.style.boxShadow = 'none';
+            postElement.style.animation = 'none';
 
-            html2canvas(postElement, {
-                useCORS: true,
-                scale: 4, // Ultra High resolution
-                allowTaint: true,
-                backgroundColor: '#e0e5ec', // Set solid background instead of null to prevent transparency fading
-                logging: false
-            }).then(canvas => {
+            htmlToImage.toPng(postElement, {
+                pixelRatio: 4, // Ultra High resolution
+                backgroundColor: '#e0e5ec',
+            }).then(dataUrl => {
                 postElement.style.borderRadius = origRadius;
                 postElement.style.boxShadow = origShadow;
+                postElement.style.animation = origAnimation;
+                
                 const link = document.createElement('a');
                 link.download = 'ronb-lite-post.png';
-                link.href = canvas.toDataURL('image/png');
+                link.href = dataUrl;
                 link.click();
+            }).catch(error => {
+                console.error('Oops, something went wrong!', error);
+                postElement.style.borderRadius = origRadius;
+                postElement.style.boxShadow = origShadow;
+                postElement.style.animation = origAnimation;
             });
         });
 
