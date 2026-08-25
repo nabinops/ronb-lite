@@ -9,7 +9,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" crossorigin="anonymous">
 
     <!-- html-to-image -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
@@ -31,7 +31,7 @@
         }
 
         body {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-dark);
             background-image:
                 radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
@@ -280,6 +280,7 @@
             padding: 4px 8px;
             border-radius: 6px;
             z-index: 10;
+            white-space: nowrap;
         }
 
         .cta-brand .brand {
@@ -310,6 +311,7 @@
             letter-spacing: 0.5px;
             z-index: 10;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
         }
 
         .post-caption-area {
@@ -609,23 +611,27 @@
             postElement.style.boxShadow = 'none';
             postElement.style.animation = 'none';
 
-            htmlToImage.toPng(postElement, {
-                pixelRatio: 4, // Ultra High resolution
-                backgroundColor: '#e0e5ec',
-            }).then(dataUrl => {
-                postElement.style.borderRadius = origRadius;
-                postElement.style.boxShadow = origShadow;
-                postElement.style.animation = origAnimation;
-                
-                const link = document.createElement('a');
-                link.download = 'ronb-lite-post.png';
-                link.href = dataUrl;
-                link.click();
-            }).catch(error => {
-                console.error('Oops, something went wrong!', error);
-                postElement.style.borderRadius = origRadius;
-                postElement.style.boxShadow = origShadow;
-                postElement.style.animation = origAnimation;
+            // html-to-image Safari/WebKit workaround: render once to prime the cache, then render again for the actual high-quality capture.
+            // This fixes fonts not loading and images getting dimmed or corrupted.
+            htmlToImage.toPng(postElement, { pixelRatio: 1 }).then(() => {
+                htmlToImage.toPng(postElement, {
+                    pixelRatio: 4, // Ultra High resolution
+                    backgroundColor: '#e0e5ec',
+                }).then(dataUrl => {
+                    postElement.style.borderRadius = origRadius;
+                    postElement.style.boxShadow = origShadow;
+                    postElement.style.animation = origAnimation;
+                    
+                    const link = document.createElement('a');
+                    link.download = 'ronb-lite-post.png';
+                    link.href = dataUrl;
+                    link.click();
+                }).catch(error => {
+                    console.error('Oops, something went wrong!', error);
+                    postElement.style.borderRadius = origRadius;
+                    postElement.style.boxShadow = origShadow;
+                    postElement.style.animation = origAnimation;
+                });
             });
         });
 
@@ -688,8 +694,17 @@
             const rect = activeBadge.getBoundingClientRect();
             const parentRect = generatedPost.getBoundingClientRect();
 
-            initialX = rect.left - parentRect.left;
-            initialY = rect.top - parentRect.top;
+            let offsetParent = activeBadge.offsetParent;
+            let parentOffsetX = 0;
+            let parentOffsetY = 0;
+            if (offsetParent && offsetParent !== generatedPost) {
+                const opRect = offsetParent.getBoundingClientRect();
+                parentOffsetX = opRect.left - parentRect.left;
+                parentOffsetY = opRect.top - parentRect.top;
+            }
+
+            initialX = (rect.left - parentRect.left) - parentOffsetX;
+            initialY = (rect.top - parentRect.top) - parentOffsetY;
 
             activeBadge.style.bottom = 'auto';
             activeBadge.style.right = 'auto';
