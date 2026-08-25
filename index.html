@@ -227,7 +227,7 @@
         /* Generated Post Styling */
         .generated-post {
             width: 100%;
-            max-width: 420px;
+            max-width: 100%;
             height: auto;
             flex-shrink: 0;
             background: #e0e5ec;
@@ -456,9 +456,13 @@
             if (onlyImage) {
                 generatedPost.classList.remove('text-only-mode');
                 previewSection.classList.add('image-mode');
-                generatedPost.style.aspectRatio = '420 / 520';
+                generatedPost.style.aspectRatio = 'auto';
                 generatedPost.style.background = '#e0e5ec';
                 postImageArea.style.display = 'block';
+                postImageArea.style.position = 'relative';
+                postImageArea.style.height = 'auto';
+                postImageArea.style.zIndex = '0';
+                postImageArea.innerHTML = '';
                 captionArea.style.display = 'block';
                 captionArea.style.position = 'static'; // Allow ctaBrand to be relative to generatedPost
                 captionArea.style.padding = '0';
@@ -479,18 +483,28 @@
 
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    postImageArea.style.backgroundImage = `url('${e.target.result}')`; // Clean image
+                    const img = new Image();
+                    img.onload = function() {
+                        postImageArea.style.aspectRatio = `${this.width} / ${this.height}`;
+                        postImageArea.style.backgroundImage = `url('${e.target.result}')`; // Clean image
+                    };
+                    img.src = e.target.result;
                 }
                 reader.readAsDataURL(postImage.files[0]);
             } else if (imageAndText) {
                 generatedPost.classList.remove('text-only-mode');
                 previewSection.classList.add('image-mode');
-                generatedPost.style.aspectRatio = '420 / 520';
+                generatedPost.style.aspectRatio = 'auto';
                 generatedPost.style.background = '#e0e5ec';
                 postImageArea.style.display = 'block';
+                postImageArea.style.position = 'relative';
+                postImageArea.style.height = 'auto';
+                postImageArea.style.zIndex = '0';
+                postImageArea.innerHTML = '';
 
                 captionArea.style.display = 'flex';
                 captionArea.style.position = 'relative';
+                captionArea.style.zIndex = '1';
                 captionArea.style.padding = ''; // restore padding
                 captionArea.style.height = 'auto';
                 captionArea.style.maxHeight = '40%';
@@ -513,18 +527,36 @@
 
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    postImageArea.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('${e.target.result}')`;
+                    const img = new Image();
+                    img.onload = function() {
+                        postImageArea.style.aspectRatio = `${this.width} / ${this.height}`;
+                        postImageArea.style.backgroundImage = `url('${e.target.result}')`;
+                        postImageArea.innerHTML = '<div style="position:absolute; inset:0; background: rgba(0,0,0,0.1);"></div>';
+                    };
+                    img.src = e.target.result;
                 }
                 reader.readAsDataURL(postImage.files[0]);
             } else if (onlyText) {
                 generatedPost.classList.add('text-only-mode');
                 previewSection.classList.remove('image-mode');
                 generatedPost.style.aspectRatio = '420 / 520';
-                generatedPost.style.background = `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url('./ronb.jpg') center/cover no-repeat, #e0e5ec`;
-                postImageArea.style.display = 'none';
+                generatedPost.style.background = '#e0e5ec';
+                
+                postImageArea.style.display = 'block';
+                postImageArea.style.position = 'absolute';
+                postImageArea.style.top = '0';
+                postImageArea.style.left = '0';
+                postImageArea.style.width = '100%';
+                postImageArea.style.height = '100%';
+                postImageArea.style.zIndex = '0';
+                postImageArea.style.backgroundImage = `url('./ronb.jpg')`;
+                postImageArea.style.backgroundSize = 'cover';
+                postImageArea.style.backgroundPosition = 'center';
+                postImageArea.innerHTML = '<div style="position:absolute; inset:0; background: rgba(255, 255, 255, 0.95);"></div>';
 
                 captionArea.style.display = 'flex';
                 captionArea.style.position = 'relative';
+                captionArea.style.zIndex = '1';
                 captionArea.style.padding = '2rem 2rem 4rem 2rem'; // Extra padding at bottom for badges, but clean otherwise
                 captionArea.style.margin = '0';
                 captionArea.style.height = '100%';
@@ -567,13 +599,22 @@
         downloadBtn.addEventListener('click', () => {
             const postElement = document.getElementById('generatedPost');
 
-            // Revert rounding just for the screenshot so it looks clean as a standalone image if desired (optional)
+            const origRadius = postElement.style.borderRadius;
+            const origShadow = postElement.style.boxShadow;
+            
+            // Remove border radius and shadow during capture to ensure sharp, non-faded edges
+            postElement.style.borderRadius = '0px';
+            postElement.style.boxShadow = 'none';
 
             html2canvas(postElement, {
                 useCORS: true,
-                scale: 2, // High resolution
-                backgroundColor: null,
+                scale: 4, // Ultra High resolution
+                allowTaint: true,
+                backgroundColor: '#e0e5ec', // Set solid background instead of null to prevent transparency fading
+                logging: false
             }).then(canvas => {
+                postElement.style.borderRadius = origRadius;
+                postElement.style.boxShadow = origShadow;
                 const link = document.createElement('a');
                 link.download = 'ronb-lite-post.png';
                 link.href = canvas.toDataURL('image/png');
