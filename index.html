@@ -14,6 +14,8 @@
 
     <!-- html-to-image -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <!-- Twemoji (replace native emoji with consistent images) -->
+    <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
 
     <style>
         :root {
@@ -559,6 +561,43 @@
             reader.readAsDataURL(file);
         }
 
+        // Replace emoji characters with Twemoji images inside a root element
+        function parseEmojisInElement(root) {
+            try {
+                if (window.twemoji) {
+                    window.twemoji.parse(root, { folder: 'svg', ext: '.svg' });
+                }
+            } catch (e) {
+                console.warn('twemoji parse failed', e);
+            }
+        }
+
+        // Inline externally loaded emoji images so html-to-image can capture them reliably
+        async function inlineEmojiImages(root) {
+            const imgs = Array.from(root.querySelectorAll('img'));
+            for (const img of imgs) {
+                const src = img.src || img.getAttribute('src');
+                if (!src) continue;
+                // Only inline images served by twemoji CDN or SVGs
+                if (src.includes('twemoji') || src.endsWith('.svg') || src.endsWith('.png')) {
+                    try {
+                        const res = await fetch(src, { mode: 'cors' });
+                        const blob = await res.blob();
+                        const reader = new FileReader();
+                        const dataUrl = await new Promise((resolve, reject) => {
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(blob);
+                        });
+                        img.src = dataUrl;
+                    } catch (err) {
+                        // if inlining fails, keep original src
+                        console.warn('Failed to inline emoji image', src, err);
+                    }
+                }
+            }
+        }
+
         generateBtn.addEventListener('click', async () => {
             const textValue = postContent.value.trim();
             const selectedFile = postImage.files && postImage.files.length > 0 ? postImage.files[0] : null;
@@ -586,6 +625,9 @@
 
             // Set text content
             renderText.textContent = textValue;
+
+            // Parse emoji characters into Twemoji images in the caption area
+            parseEmojisInElement(renderText);
 
             // Handle background image or fallback
             let isMobile = window.innerWidth <= 768;
@@ -748,6 +790,10 @@
             postElement.style.animation = 'none';
 
             try {
+                // Ensure twemoji images are parsed and inlined before capture
+                parseEmojisInElement(postElement);
+                await inlineEmojiImages(postElement);
+
                 await htmlToImage.toPng(postElement, { pixelRatio: 1 });
                 const dataUrl = await htmlToImage.toPng(postElement, {
                     pixelRatio: 4,
