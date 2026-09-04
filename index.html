@@ -241,12 +241,40 @@
 
         .preview-section.active {
             display: flex;
+            flex-direction: column;
             animation: fadeIn 0.4s ease-out forwards;
         }
 
         .empty-state {
             display: none;
-            /* completely removed empty state */
+        }
+
+        .mobile-resize-controls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .resize-btn {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(139, 30, 63, 0.4);
+            transition: transform 0.1s;
+        }
+        .resize-btn:active {
+            transform: scale(0.95);
         }
 
         /* Generated Post Styling */
@@ -417,18 +445,21 @@
             </div>
 
             <div class="input-group"
-                style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; margin-bottom: 1.5rem;">
+                style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="dragToggle" style="width: auto; cursor: pointer;">
                     <label for="dragToggle"
-                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable
-                        drag</label>
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable drag</label>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="resizeToggle" style="width: auto; cursor: pointer;">
                     <label for="resizeToggle"
-                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable
-                        resize</label>
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable resize</label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="keepOriginalToggle" style="width: auto; cursor: pointer;">
+                    <label for="keepOriginalToggle"
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Keep original</label>
                 </div>
             </div>
 
@@ -452,6 +483,14 @@
                 </div>
                 <div class="cta-follow" id="ctaFollow">Follow Us</div>
             </div>
+
+            <div id="mobileResizeControls" class="mobile-resize-controls">
+                <span style="font-size: 0.85rem; color: #1e293b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Resize Selected Badge</span>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="btnResizeMinus" class="resize-btn">-</button>
+                    <button id="btnResizePlus" class="resize-btn">+</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -467,6 +506,18 @@
         const captionArea = document.querySelector('.post-caption-area');
         const ctaBrand = document.getElementById('ctaBrand');
         const ctaFollow = document.getElementById('ctaFollow');
+        const keepOriginalToggle = document.getElementById('keepOriginalToggle');
+
+        keepOriginalToggle.addEventListener('change', () => {
+            const video = postImageArea.querySelector('video');
+            if (video && video.videoWidth && video.videoHeight) {
+                if (keepOriginalToggle.checked) {
+                    postImageArea.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+                } else {
+                    postImageArea.style.aspectRatio = '4 / 5';
+                }
+            }
+        });
 
         let currentVideoFrameDataUrl = '';
 
@@ -556,16 +607,15 @@
                 video.style.inset = '0';
                 video.style.width = '100%';
                 video.style.height = '100%';
-                video.style.objectFit = 'cover';
+                video.style.objectFit = 'fill';
                 video.style.display = 'block';
                 postImageArea.appendChild(video);
 
                 video.addEventListener('loadedmetadata', () => {
-                    if (video.videoWidth && video.videoHeight) {
+                    if (keepOriginalToggle.checked && video.videoWidth && video.videoHeight) {
                         postImageArea.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
                     } else {
-                        // Fallback aspect ratio if metadata is missing for some reason
-                        postImageArea.style.aspectRatio = '16 / 9';
+                        postImageArea.style.aspectRatio = '4 / 5';
                     }
                 }, { once: true });
 
@@ -797,64 +847,269 @@
             const currentFile = postImage.files && postImage.files.length > 0 ? postImage.files[0] : null;
             const isExportVideo = isVideoFile(currentFile);
 
-            const origRadius = postElement.style.borderRadius;
-            const origShadow = postElement.style.boxShadow;
-            const origAnimation = postElement.style.animation;
+            if (isExportVideo) {
+                downloadBtn.disabled = true;
+                const originalBtnText = downloadBtn.textContent;
+                downloadBtn.textContent = 'Generating Video...';
 
-            if (isExportVideo && currentVideoFrameDataUrl) {
                 const mediaNode = postImageArea.querySelector('video');
+                const origRadius = postElement.style.borderRadius;
+                const origShadow = postElement.style.boxShadow;
+                const origAnimation = postElement.style.animation;
+                const origPostBg = postElement.style.background;
+                const origImageAreaBg = postImageArea.style.backgroundColor;
+
+                // 1. Prepare DOM for transparent capture
+                postElement.style.borderRadius = '0px';
+                postElement.style.boxShadow = 'none';
+                postElement.style.animation = 'none';
+                postElement.style.background = 'transparent';
+                postImageArea.style.backgroundColor = 'transparent';
                 if (mediaNode) {
-                    mediaNode.style.display = 'none';
+                    mediaNode.remove(); // Remove entirely from DOM to prevent htmlToImage cloning errors
                 }
-                postImageArea.style.backgroundImage = `url('${currentVideoFrameDataUrl}')`;
-                postImageArea.style.backgroundSize = 'cover';
-                postImageArea.style.backgroundPosition = 'center';
-                postImageArea.style.backgroundColor = '#0f172a';
-            }
 
-            postElement.style.borderRadius = '0px';
-            postElement.style.boxShadow = 'none';
-            postElement.style.animation = 'none';
+                try {
+                    parseEmojisInElement(postElement);
+                    await inlineEmojiImages(postElement);
 
-            try {
-                // Ensure twemoji images are parsed and inlined before capture
-                parseEmojisInElement(postElement);
-                await inlineEmojiImages(postElement);
+                    const filter = (node) => node.tagName !== 'VIDEO';
 
-                await htmlToImage.toPng(postElement, { pixelRatio: 1 });
-                const dataUrl = await htmlToImage.toPng(postElement, {
-                    pixelRatio: 4,
-                    backgroundColor: '#e0e5ec',
-                });
+                    // Hack to fix html2canvas / htmlToImage fonts loading
+                    await htmlToImage.toPng(postElement, { pixelRatio: 1, backgroundColor: 'rgba(0,0,0,0)', filter });
+                    
+                    // Capture static overlay
+                    const overlayDataUrl = await htmlToImage.toPng(postElement, {
+                        pixelRatio: 2,
+                        backgroundColor: 'rgba(0,0,0,0)',
+                        filter
+                    });
+                    
+                    const overlayImg = new Image();
+                    overlayImg.src = overlayDataUrl;
+                    await new Promise(r => overlayImg.onload = r);
 
-                if (isExportVideo && currentVideoFrameDataUrl) {
-                    const mediaNode = postImageArea.querySelector('video');
+                    // Restore DOM
+                    postElement.style.borderRadius = origRadius;
+                    postElement.style.boxShadow = origShadow;
+                    postElement.style.animation = origAnimation;
+                    postElement.style.background = origPostBg;
+                    postImageArea.style.backgroundColor = origImageAreaBg;
                     if (mediaNode) {
+                        postImageArea.appendChild(mediaNode);
                         mediaNode.style.display = 'block';
                     }
-                    postImageArea.style.backgroundImage = 'none';
-                }
 
-                postElement.style.borderRadius = origRadius;
-                postElement.style.boxShadow = origShadow;
-                postElement.style.animation = origAnimation;
+                    // Setup Canvas
+                    const exportRatio = 2;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = postElement.offsetWidth * exportRatio;
+                    canvas.height = postElement.offsetHeight * exportRatio;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Helper to draw background with radius
+                    function drawBackground() {
+                        ctx.save();
+                        ctx.fillStyle = '#e0e5ec'; // Default background color
+                        // Approximate border radius (20px * ratio)
+                        const radius = 20 * exportRatio;
+                        ctx.beginPath();
+                        ctx.moveTo(radius, 0);
+                        ctx.lineTo(canvas.width - radius, 0);
+                        ctx.quadraticCurveTo(canvas.width, 0, canvas.width, radius);
+                        ctx.lineTo(canvas.width, canvas.height - radius);
+                        ctx.quadraticCurveTo(canvas.width, canvas.height, canvas.width - radius, canvas.height);
+                        ctx.lineTo(radius, canvas.height);
+                        ctx.quadraticCurveTo(0, canvas.height, 0, canvas.height - radius);
+                        ctx.lineTo(0, radius);
+                        ctx.quadraticCurveTo(0, 0, radius, 0);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.clip(); // clip subsequent drawing
+                    }
 
-                const link = document.createElement('a');
-                link.download = 'ronb-lite-post.png';
-                link.href = dataUrl;
-                link.click();
-            } catch (error) {
-                console.error('Oops, something went wrong!', error);
-                if (isExportVideo && currentVideoFrameDataUrl) {
-                    const mediaNode = postImageArea.querySelector('video');
+                    // Video bounds relative to postElement
+                    const postRect = postElement.getBoundingClientRect();
+                    const imgRect = postImageArea.getBoundingClientRect();
+                    const vX = (imgRect.left - postRect.left) * exportRatio;
+                    const vY = (imgRect.top - postRect.top) * exportRatio;
+                    const vW = imgRect.width * exportRatio;
+                    const vH = imgRect.height * exportRatio;
+
+                    const stream = canvas.captureStream ? canvas.captureStream(30) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(30) : null);
+                    if (!stream) {
+                        alert("Video export is not supported in this browser.");
+                        throw new Error("canvas.captureStream is not supported.");
+                    }
+                    
+                    // Support Safari (.mp4) and Chrome/Firefox (.webm)
+                    let options = { mimeType: 'video/webm; codecs=vp9' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' };
+                    }
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/mp4' }; 
+                    }
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = {}; // let browser decide
+                    }
+
+                    const recorder = new MediaRecorder(stream, options);
+                    const chunks = [];
+                    recorder.ondataavailable = e => {
+                        if (e.data && e.data.size > 0) {
+                            chunks.push(e.data);
+                        }
+                    };
+                    
+                    // Wait for video to be ready to play
+                    const srcVideo = document.createElement('video');
+                    srcVideo.src = URL.createObjectURL(currentFile);
+                    srcVideo.muted = true;
+                    srcVideo.playsInline = true;
+                    srcVideo.crossOrigin = 'anonymous';
+                    
+                    await new Promise((resolve, reject) => {
+                        srcVideo.addEventListener('loadeddata', resolve, {once:true});
+                        srcVideo.addEventListener('error', reject, {once:true});
+                        srcVideo.load();
+                    });
+                    
+                    let isRecording = true;
+                    let fallbackTimeout;
+
+                    recorder.onstop = () => {
+                        isRecording = false;
+                        clearTimeout(fallbackTimeout);
+                        if (chunks.length === 0) {
+                            console.error("No video data recorded.");
+                            alert("Failed to export video. Please try again.");
+                        } else {
+                            const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            const ext = (recorder.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
+                            link.download = `ronb-lite-post.${ext}`;
+                            link.href = url;
+                            link.click();
+                            setTimeout(() => URL.revokeObjectURL(url), 100);
+                        }
+                        
+                        downloadBtn.disabled = false;
+                        downloadBtn.textContent = originalBtnText;
+                        URL.revokeObjectURL(srcVideo.src);
+                    };
+
+                    recorder.start(100); // Request data every 100ms
+                    
+                    try {
+                        await srcVideo.play();
+                    } catch (playErr) {
+                        console.error("Autoplay failed during export:", playErr);
+                        // If it fails to play, we just record a 3-second static video
+                    }
+
+                    // Fallback to stop recording if it doesn't end properly
+                    const maxDuration = (srcVideo.duration && isFinite(srcVideo.duration) ? srcVideo.duration : 10) * 1000 + 2000;
+                    fallbackTimeout = setTimeout(() => {
+                        if (isRecording) {
+                            console.warn("Recording timed out, stopping forcefully.");
+                            recorder.stop();
+                        }
+                    }, maxDuration);
+                    
+                    function renderFrame() {
+                        if (!isRecording) return;
+                        
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        drawBackground();
+                        
+                        // Draw Video with object-fit: fill
+                        if (srcVideo.readyState >= 2) {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.rect(vX, vY, vW, vH);
+                            ctx.clip();
+                            
+                            // Fill the video container with the dark background just in case
+                            ctx.fillStyle = '#0f172a';
+                            ctx.fill();
+                            
+                            // object-fit: fill stretches the video to exactly match the container dimensions
+                            ctx.drawImage(srcVideo, vX, vY, vW, vH);
+                            ctx.restore();
+                        }
+                        
+                        // Draw overlay (text and badges)
+                        ctx.drawImage(overlayImg, 0, 0, canvas.width, canvas.height);
+                        
+                        ctx.restore(); // restore clipping from drawBackground
+                        
+                        if (srcVideo.ended || srcVideo.paused) {
+                            // Only stop if we actually finished playing, or if it failed to play
+                            if (srcVideo.currentTime > 0 && srcVideo.ended) {
+                                recorder.stop();
+                            } else if (srcVideo.paused && srcVideo.currentTime === 0) {
+                                // Fallback: it never played, wait for maxDuration timeout to stop it
+                                requestAnimationFrame(renderFrame);
+                            }
+                        } else {
+                            requestAnimationFrame(renderFrame);
+                        }
+                    }
+                    
+                    renderFrame();
+
+                } catch (error) {
+                    console.error('Oops, something went wrong with video export!', error);
+                    postElement.style.borderRadius = origRadius;
+                    postElement.style.boxShadow = origShadow;
+                    postElement.style.animation = origAnimation;
+                    postElement.style.background = origPostBg;
+                    postImageArea.style.backgroundColor = origImageAreaBg;
                     if (mediaNode) {
+                        postImageArea.appendChild(mediaNode);
                         mediaNode.style.display = 'block';
                     }
-                    postImageArea.style.backgroundImage = 'none';
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = originalBtnText;
                 }
-                postElement.style.borderRadius = origRadius;
-                postElement.style.boxShadow = origShadow;
-                postElement.style.animation = origAnimation;
+
+            } else {
+                // IMAGE EXPORT LOGIC
+                const origRadius = postElement.style.borderRadius;
+                const origShadow = postElement.style.boxShadow;
+                const origAnimation = postElement.style.animation;
+
+                postElement.style.borderRadius = '0px';
+                postElement.style.boxShadow = 'none';
+                postElement.style.animation = 'none';
+
+                try {
+                    // Ensure twemoji images are parsed and inlined before capture
+                    parseEmojisInElement(postElement);
+                    await inlineEmojiImages(postElement);
+
+                    await htmlToImage.toPng(postElement, { pixelRatio: 1 });
+                    const dataUrl = await htmlToImage.toPng(postElement, {
+                        pixelRatio: 4,
+                        backgroundColor: '#e0e5ec',
+                    });
+
+                    postElement.style.borderRadius = origRadius;
+                    postElement.style.boxShadow = origShadow;
+                    postElement.style.animation = origAnimation;
+
+                    const link = document.createElement('a');
+                    link.download = 'ronb-lite-post.png';
+                    link.href = dataUrl;
+                    link.click();
+                } catch (error) {
+                    console.error('Oops, something went wrong!', error);
+                    postElement.style.borderRadius = origRadius;
+                    postElement.style.boxShadow = origShadow;
+                    postElement.style.animation = origAnimation;
+                }
             }
         });
 
@@ -864,7 +1119,19 @@
 
         let isDragging = false;
         let activeBadge = null;
+        let selectedBadge = null;
         let startX, startY, initialX, initialY;
+
+        function updateMobileResizeControls() {
+            const controls = document.getElementById('mobileResizeControls');
+            if (window.innerWidth <= 768 && resizeToggle.checked && selectedBadge) {
+                controls.style.display = 'flex';
+            } else {
+                controls.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('resize', updateMobileResizeControls);
 
         function makeDraggable(element) {
             element.addEventListener('mousedown', dragStart);
@@ -873,34 +1140,48 @@
             element.dataset.scale = 1;
         }
 
+        function applyScale(element, newScale) {
+            newScale = Math.min(Math.max(0.3, newScale), 4);
+            element.dataset.scale = newScale;
+
+            if (element.style.transformOrigin !== 'top left') {
+                const rect = element.getBoundingClientRect();
+                const parentRect = generatedPost.getBoundingClientRect();
+                element.style.bottom = 'auto';
+                element.style.right = 'auto';
+                element.style.margin = '0';
+                element.style.left = (rect.left - parentRect.left) + 'px';
+                element.style.top = (rect.top - parentRect.top) + 'px';
+                element.style.transformOrigin = 'top left';
+            }
+
+            element.style.transform = `scale(${newScale})`;
+        }
+
         function handleResize(e) {
             if (!resizeToggle.checked) return;
             e.preventDefault();
-
             let scale = parseFloat(this.dataset.scale || 1);
-            if (e.deltaY < 0) {
-                scale += 0.05;
-            } else {
-                scale -= 0.05;
-            }
-            scale = Math.min(Math.max(0.3, scale), 4);
-            this.dataset.scale = scale;
-
-            if (this.style.transformOrigin !== 'top left') {
-                const rect = this.getBoundingClientRect();
-                const parentRect = generatedPost.getBoundingClientRect();
-                this.style.bottom = 'auto';
-                this.style.right = 'auto';
-                this.style.margin = '0';
-                this.style.left = (rect.left - parentRect.left) + 'px';
-                this.style.top = (rect.top - parentRect.top) + 'px';
-                this.style.transformOrigin = 'top left';
-            }
-
-            this.style.transform = `scale(${scale})`;
+            scale += (e.deltaY < 0) ? 0.05 : -0.05;
+            applyScale(this, scale);
         }
 
+        document.getElementById('btnResizeMinus').addEventListener('click', () => {
+            if (!selectedBadge) return;
+            let scale = parseFloat(selectedBadge.dataset.scale || 1);
+            applyScale(selectedBadge, scale - 0.05);
+        });
+
+        document.getElementById('btnResizePlus').addEventListener('click', () => {
+            if (!selectedBadge) return;
+            let scale = parseFloat(selectedBadge.dataset.scale || 1);
+            applyScale(selectedBadge, scale + 0.05);
+        });
+
         function dragStart(e) {
+            selectedBadge = this;
+            updateMobileResizeControls();
+            
             if (!dragToggle.checked) return;
 
             activeBadge = this;
@@ -994,6 +1275,7 @@
         });
 
         resizeToggle.addEventListener('change', () => {
+            updateMobileResizeControls();
             if (!resizeToggle.checked) {
                 ctaBrand.dataset.scale = 1;
                 ctaFollow.dataset.scale = 1;
