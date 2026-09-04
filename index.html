@@ -9,8 +9,10 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"
+        crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet"
+        crossorigin="anonymous">
 
     <!-- html-to-image -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
@@ -65,7 +67,7 @@
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 28px;
             padding: 1.25rem;
-            box-shadow: 0 25px 60px -18px var(--shadow-soft), inset 0 1px 0 rgba(255,255,255,0.18);
+            box-shadow: 0 25px 60px -18px var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.18);
             position: relative;
             overflow: hidden;
         }
@@ -74,7 +76,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(120deg, rgba(255,255,255,0.12), transparent 28%, rgba(255,255,255,0.04) 70%, transparent);
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.12), transparent 28%, rgba(255, 255, 255, 0.04) 70%, transparent);
             pointer-events: none;
         }
 
@@ -140,7 +142,7 @@
             font-size: 1rem;
             resize: vertical;
             transition: all 0.3s ease;
-            box-shadow: inset 0 1px 1px rgba(255,255,255,0.04);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.04);
         }
 
         textarea:focus {
@@ -158,7 +160,7 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: border-color 0.3s ease;
-            box-shadow: inset 0 1px 1px rgba(255,255,255,0.04);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.04);
         }
 
         input[type="file"]:hover {
@@ -168,7 +170,7 @@
         .generate-btn {
             background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             color: #fff;
-            border: 1px solid rgba(255,255,255,0.14);
+            border: 1px solid rgba(255, 255, 255, 0.14);
             padding: 1rem 1.1rem;
             border-radius: 14px;
             font-weight: 700;
@@ -308,27 +310,27 @@
             transform: translate(-50%, -50%);
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             background: linear-gradient(135deg, #8b1e3f, #b71d4a);
-            padding: 4px 8px;
-            border-radius: 6px;
+            padding: 3px 6px;
+            border-radius: 4px;
             z-index: 10;
             white-space: nowrap;
             box-shadow: 0 8px 20px rgba(94, 20, 35, 0.22);
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .cta-brand .brand {
             font-weight: 700;
-            font-size: 0.65rem;
+            font-size: 0.55rem;
             color: #ffffff;
             letter-spacing: -0.2px;
         }
 
         .cta-brand .fb-icon {
             fill: #ffffff;
-            width: 15px;
-            height: 15px;
+            width: 12px;
+            height: 12px;
         }
 
         .cta-follow {
@@ -338,16 +340,16 @@
             transform: translateX(-50%);
             background: linear-gradient(135deg, #1d4ed8, #2563eb);
             color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 0.5rem;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.45rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             z-index: 10;
             box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28);
             white-space: nowrap;
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .post-caption-area {
@@ -419,12 +421,14 @@
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="dragToggle" style="width: auto; cursor: pointer;">
                     <label for="dragToggle"
-                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable drag</label>
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable
+                        drag</label>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="resizeToggle" style="width: auto; cursor: pointer;">
                     <label for="resizeToggle"
-                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable resize</label>
+                        style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enable
+                        resize</label>
                 </div>
             </div>
 
@@ -485,7 +489,27 @@
                 video.preload = 'auto';
                 video.crossOrigin = 'anonymous';
 
+                let resolved = false;
+                const finish = (result) => {
+                    if (resolved) return;
+                    resolved = true;
+                    URL.revokeObjectURL(videoUrl);
+                    resolve(result);
+                };
+
+                // Fallback timeout in case events don't fire
+                setTimeout(() => finish(''), 2000);
+
                 video.addEventListener('loadeddata', () => {
+                    // Try to seek slightly into the video to avoid blank first frame
+                    if (video.duration && video.duration < 0.1) {
+                        video.currentTime = video.duration / 2;
+                    } else {
+                        video.currentTime = 0.1;
+                    }
+                }, { once: true });
+
+                video.addEventListener('seeked', () => {
                     try {
                         const canvas = document.createElement('canvas');
                         canvas.width = video.videoWidth || 1280;
@@ -496,14 +520,12 @@
                     } catch (error) {
                         currentVideoFrameDataUrl = '';
                     }
-                    URL.revokeObjectURL(videoUrl);
-                    resolve(currentVideoFrameDataUrl);
+                    finish(currentVideoFrameDataUrl);
                 }, { once: true });
 
                 video.addEventListener('error', () => {
                     currentVideoFrameDataUrl = '';
-                    URL.revokeObjectURL(videoUrl);
-                    resolve('');
+                    finish('');
                 }, { once: true });
 
                 video.load();
@@ -538,8 +560,13 @@
                 video.style.display = 'block';
                 postImageArea.appendChild(video);
 
-                video.addEventListener('loadeddata', () => {
-                    URL.revokeObjectURL(videoUrl);
+                video.addEventListener('loadedmetadata', () => {
+                    if (video.videoWidth && video.videoHeight) {
+                        postImageArea.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+                    } else {
+                        // Fallback aspect ratio if metadata is missing for some reason
+                        postImageArea.style.aspectRatio = '16 / 9';
+                    }
                 }, { once: true });
 
                 return;
@@ -548,7 +575,7 @@
             const reader = new FileReader();
             reader.onload = function (e) {
                 const img = new Image();
-                img.onload = function() {
+                img.onload = function () {
                     postImageArea.style.aspectRatio = `${this.width} / ${this.height}`;
                     postImageArea.style.backgroundImage = `url('${e.target.result}')`;
                     postImageArea.style.backgroundSize = 'cover';
@@ -711,7 +738,7 @@
                 previewSection.classList.remove('image-mode');
                 generatedPost.style.aspectRatio = '420 / 520';
                 generatedPost.style.background = '#e0e5ec';
-                
+
                 postImageArea.style.display = 'block';
                 postImageArea.style.position = 'absolute';
                 postImageArea.style.top = '0';
@@ -849,7 +876,7 @@
         function handleResize(e) {
             if (!resizeToggle.checked) return;
             e.preventDefault();
-            
+
             let scale = parseFloat(this.dataset.scale || 1);
             if (e.deltaY < 0) {
                 scale += 0.05;
@@ -858,7 +885,7 @@
             }
             scale = Math.min(Math.max(0.3, scale), 4);
             this.dataset.scale = scale;
-            
+
             if (this.style.transformOrigin !== 'top left') {
                 const rect = this.getBoundingClientRect();
                 const parentRect = generatedPost.getBoundingClientRect();
@@ -869,7 +896,7 @@
                 this.style.top = (rect.top - parentRect.top) + 'px';
                 this.style.transformOrigin = 'top left';
             }
-            
+
             this.style.transform = `scale(${scale})`;
         }
 
@@ -970,7 +997,7 @@
             if (!resizeToggle.checked) {
                 ctaBrand.dataset.scale = 1;
                 ctaFollow.dataset.scale = 1;
-                
+
                 if (ctaBrand.style.transform.includes('scale')) {
                     ctaBrand.style.transform = 'scale(1)';
                 }
